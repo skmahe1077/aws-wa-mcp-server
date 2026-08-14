@@ -140,25 +140,7 @@ python -m pip install -e ".[test]"
 
 This installs the console script `aws-wa-mcp-server` (equivalent to `python -m aws_wa_mcp.server`).
 
-> **Requirements:** Python 3.10+, `mcp>=2.0`, and `boto3>=1.28`.
-
-### MCP SDK version
-
-This server targets the **`mcp` 2.x** Python SDK, where the server class is `MCPServer`, imported from `mcp.server.mcpserver`:
-
-```python
-from mcp.server.mcpserver import MCPServer
-mcp = MCPServer("aws-wa-mcp-server", version="0.1.0")
-```
-
-<details>
-<summary><strong>Migrating from <code>mcp</code> 1.x</strong></summary>
-
-On the 1.x SDK this class was `FastMCP` in `mcp.server.fastmcp`. The `add_tool` / `tool` / `run` APIs are signature-compatible, so the only change to run on 1.x is the import and the constructor call in [`aws_wa_mcp/server.py`](aws_wa_mcp/server.py) - the tool functions themselves are unchanged. This project is developed and verified against `mcp` 2.0.0; the `pyproject.toml` pin is `mcp>=2.0`.
-
-</details>
-
-Transport is **stdio** (for local use with Claude Desktop / Claude Code). There is intentionally no Lambda/API Gateway variant yet.
+> **Requirements:** Python 3.10+, `mcp>=2.0`, and `boto3>=1.28`. Transport is **stdio**, for local use with Claude Desktop / Claude Code.
 
 ---
 
