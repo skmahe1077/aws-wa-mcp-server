@@ -1,0 +1,47 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AwsWaMcpReadOnlyScan",
+      "Effect": "Allow",
+      "Action": [
+        "sts:GetCallerIdentity",
+
+        "iam:GetAccountSummary",
+
+        "ec2:DescribeInstances",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeSnapshots",
+        "ec2:DescribeAddresses",
+        "ec2:DescribeSecurityGroups",
+
+        "rds:DescribeDBInstances",
+
+        "elasticloadbalancing:DescribeLoadBalancers",
+
+        "autoscaling:DescribeAutoScalingGroups",
+
+        "s3:ListAllMyBuckets",
+        "s3:GetAccountPublicAccessBlock",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetLifecycleConfiguration",
+
+        "guardduty:ListDetectors",
+        "guardduty:GetDetector",
+
+        "budgets:ViewBudget",
+
+        "cloudtrail:DescribeTrails",
+        "cloudtrail:GetTrailStatus",
+
+        "config:DescribeConfigurationRecorders",
+        "config:DescribeConfigurationRecorderStatus",
+
+        "cloudwatch:DescribeAlarms",
+
+        "logs:DescribeLogGroups"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
