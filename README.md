@@ -158,19 +158,41 @@ This installs the console script `aws-wa-mcp-server` (equivalent to `python -m a
 
 ## Configuration
 
-### AWS credentials
+Set up AWS access **before** wiring the server into an MCP client - the client only launches the server; it does not create credentials. Do these three steps first, then move on to [Usage](#usage).
 
-Credentials are resolved the usual way by boto3 - any of these work:
+### Step 1 - Configure AWS credentials
+
+Create a named profile with the AWS CLI (recommended), so the server can assume it later:
+
+```bash
+aws configure --profile wa-scan
+# AWS Access Key ID     [None]: ...
+# AWS Secret Access Key [None]: ...
+# Default region name   [None]: eu-west-1
+# Default output format [None]: json
+```
+
+Credentials are resolved the usual way by boto3, so any of these also work instead of a profile:
 
 - `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`)
 - a named profile via `AWS_PROFILE` or the tool's `profile` argument
-- an EC2/ECS instance role
+- an EC2/ECS instance role (when running on AWS compute)
 
 **Region resolution order:** the tool's `region` argument → the session/profile default → `AWS_REGION` → `AWS_DEFAULT_REGION` → `us-east-1`.
 
-### IAM policy
+### Step 2 - Attach the read-only IAM policy
 
-Attach [`iam-policy-readonly.json`](iam-policy-readonly.json) to the principal you scan with. It lists exactly the read actions the checks issue and nothing else:
+Grant the principal exactly the read actions the checks need - nothing else. Attach [`iam-policy-readonly.json`](iam-policy-readonly.json):
+
+```bash
+aws iam put-user-policy \
+  --user-name your-user \
+  --policy-name AwsWaMcpReadOnlyScan \
+  --policy-document file://iam-policy-readonly.json \
+  --profile wa-scan
+```
+
+The policy lists only these read actions:
 
 ```json
 {
@@ -207,6 +229,16 @@ Attach [`iam-policy-readonly.json`](iam-policy-readonly.json) to the principal y
 ```
 
 > The canonical policy in the repo enumerates each `ec2:Describe*` action individually. Use it verbatim for a least-privilege setup.
+
+### Step 3 - Verify access
+
+Confirm the profile resolves before pointing an MCP client at it:
+
+```bash
+aws sts get-caller-identity --profile wa-scan
+```
+
+A response with your account ID and ARN means you're ready. Any check that is still denied at scan time is reported in `checks_skipped` rather than failing the whole scan, so you can tighten permissions iteratively.
 
 ---
 
