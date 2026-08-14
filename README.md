@@ -291,6 +291,32 @@ Add this to `.vscode/settings.json` or your user settings:
 
 </details>
 
+<details>
+<summary><strong>Kiro</strong></summary>
+
+Kiro reads MCP servers from `.kiro/settings/mcp.json` (workspace-level) or `~/.kiro/settings/mcp.json` (user-level). Add:
+
+```json
+{
+  "mcpServers": {
+    "aws-well-architected": {
+      "command": "uvx",
+      "args": ["aws-wa-mcp-server"],
+      "env": {
+        "AWS_PROFILE": "your-profile",
+        "AWS_REGION": "eu-west-2"
+      },
+      "disabled": false,
+      "autoApprove": ["scan_all_pillars"]
+    }
+  }
+}
+```
+
+If you installed the package with pip instead of using `uvx`, set `"command": "aws-wa-mcp-server"` and drop the `args`. Kiro picks up changes to `mcp.json` automatically; every tool is read-only, so it's safe to add scans to `autoApprove` if you'd rather not confirm each run.
+
+</details>
+
 ### 2. Start asking
 
 Once it's wired up, just talk to your assistant in plain language:
