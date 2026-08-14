@@ -363,6 +363,18 @@ Once it's wired up, just talk to your assistant in plain language:
 "Run all six Well-Architected pillars and give me the overall health score"
 ```
 
+### Example
+
+The assistant runs the scan and returns findings mapped to real best-practice IDs, each with a severity and a remediation:
+
+![Example Well-Architected scan in an MCP client](docs/screenshots/example-scan.png)
+
+<!--
+  Capture your MCP client (Claude Desktop / Kiro / MCP Inspector) showing a scan
+  result, save it as docs/screenshots/example-scan.png, then commit the PNG.
+  Sanitize first: mask account IDs, ARNs, and resource IDs - this repo is public.
+-->
+
 ---
 
 ## Development
