@@ -124,6 +124,18 @@ Each pillar starts at 100 and subtracts a penalty per finding, by severity: `CRI
 
 ## Installation
 
+### From PyPI (recommended)
+
+```bash
+pip install aws-wa-mcp-server
+```
+
+Or run it without installing anything, using [uv](https://docs.astral.sh/uv/):
+
+```bash
+uvx aws-wa-mcp-server
+```
+
 ### From source
 
 ```bash

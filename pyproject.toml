@@ -9,12 +9,29 @@ description = "Read-only MCP server that scans an AWS account against the six AW
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "aws-wa-mcp-server" }]
+authors = [{ name = "Mahendran Selvakumar", email = "skmahe1077@gmail.com" }]
 keywords = ["aws", "well-architected", "mcp", "boto3", "security", "cost"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: System :: Systems Administration",
+]
 dependencies = [
     "mcp>=2.0",
     "boto3>=1.28",
 ]
+
+[project.urls]
+Homepage = "https://github.com/skmahe1077/aws-wa-mcp-server"
+Repository = "https://github.com/skmahe1077/aws-wa-mcp-server"
+Issues = "https://github.com/skmahe1077/aws-wa-mcp-server/issues"
 
 [project.optional-dependencies]
 test = [
