@@ -369,9 +369,12 @@ The assistant runs the scan and returns findings mapped to real best-practice ID
 
 ![Example Well-Architected scan in an MCP client](docs/screenshots/example-scan.png)
 
+![Example Well-Architected scan findings](docs/screenshots/example-scan-1.png)
+
 <!--
   Capture your MCP client (Claude Desktop / Kiro / MCP Inspector) showing a scan
-  result, save it as docs/screenshots/example-scan.png, then commit the PNG.
+  result, save them as docs/screenshots/example-scan.png and example-scan-1.png,
+  then commit the PNGs.
   Sanitize first: mask account IDs, ARNs, and resource IDs - this repo is public.
 -->
 
