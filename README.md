@@ -4,7 +4,7 @@
 
 **Live, read-only Well-Architected reviews of your AWS account, straight from your assistant.**
 
-Scan an AWS account against all six pillars of the [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/) — Cost Optimization, Reliability, Performance Efficiency, Operational Excellence, Security, and Sustainability — and get back concrete findings mapped to real best-practice IDs, each with a severity, the offending resource, and a remediation recommendation.
+Scan an AWS account against all six pillars of the [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/) - Cost Optimization, Reliability, Performance Efficiency, Operational Excellence, Security, and Sustainability - and get back concrete findings mapped to real best-practice IDs, each with a severity, the offending resource, and a remediation recommendation.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -22,12 +22,12 @@ Scan an AWS account against all six pillars of the [AWS Well-Architected Framewo
 
 ## Features
 
-The server exposes **7 scanning tools** — one per Well-Architected pillar, plus an account-wide `scan_all_pillars` — all reachable through a single MCP interface. Point your assistant at the pillar you care about and ask.
+The server exposes **7 scanning tools** - one per Well-Architected pillar, plus an account-wide `scan_all_pillars` - all reachable through a single MCP interface. Point your assistant at the pillar you care about and ask.
 
-Every tool accepts optional `region` and `profile` arguments and returns findings sorted by severity, a 0–100 pillar `health_score`, and a `checks_skipped` list for any check blocked by missing permissions or an API error.
+Every tool accepts optional `region` and `profile` arguments and returns findings sorted by severity, a 0-100 pillar `health_score`, and a `checks_skipped` list for any check blocked by missing permissions or an API error.
 
 <details>
-<summary><strong>Security</strong> — <code>scan_security</code></summary>
+<summary><strong>Security</strong> - <code>scan_security</code></summary>
 
 | Check | Best-practice ID |
 |---|---|
@@ -40,7 +40,7 @@ Every tool accepts optional `region` and `profile` arguments and returns finding
 </details>
 
 <details>
-<summary><strong>Reliability</strong> — <code>scan_reliability</code></summary>
+<summary><strong>Reliability</strong> - <code>scan_reliability</code></summary>
 
 | Check | Best-practice ID |
 |---|---|
@@ -53,7 +53,7 @@ Every tool accepts optional `region` and `profile` arguments and returns finding
 </details>
 
 <details>
-<summary><strong>Cost Optimization</strong> — <code>scan_cost_optimization</code></summary>
+<summary><strong>Cost Optimization</strong> - <code>scan_cost_optimization</code></summary>
 
 | Check | Best-practice ID |
 |---|---|
@@ -65,7 +65,7 @@ Every tool accepts optional `region` and `profile` arguments and returns finding
 </details>
 
 <details>
-<summary><strong>Performance Efficiency</strong> — <code>scan_performance_efficiency</code></summary>
+<summary><strong>Performance Efficiency</strong> - <code>scan_performance_efficiency</code></summary>
 
 | Check | Best-practice ID |
 |---|---|
@@ -77,7 +77,7 @@ Every tool accepts optional `region` and `profile` arguments and returns finding
 </details>
 
 <details>
-<summary><strong>Operational Excellence</strong> — <code>scan_operational_excellence</code></summary>
+<summary><strong>Operational Excellence</strong> - <code>scan_operational_excellence</code></summary>
 
 | Check | Best-practice ID |
 |---|---|
@@ -89,7 +89,7 @@ Every tool accepts optional `region` and `profile` arguments and returns finding
 </details>
 
 <details>
-<summary><strong>Sustainability</strong> — <code>scan_sustainability</code></summary>
+<summary><strong>Sustainability</strong> - <code>scan_sustainability</code></summary>
 
 | Check | Best-practice ID |
 |---|---|
@@ -101,7 +101,7 @@ Every tool accepts optional `region` and `profile` arguments and returns finding
 </details>
 
 <details>
-<summary><strong>All pillars</strong> — <code>scan_all_pillars</code></summary>
+<summary><strong>All pillars</strong> - <code>scan_all_pillars</code></summary>
 
 Runs every check above and returns an **overall weighted health score** (the mean of the six severity-weighted pillar scores), per-pillar `health_score` values, full per-pillar results, aggregate totals, and the top findings account-wide.
 
@@ -109,16 +109,16 @@ Runs every check above and returns an **overall weighted health score** (the mea
 
 ### Health score
 
-Each pillar starts at 100 and subtracts a penalty per finding, by severity: `CRITICAL −20`, `HIGH −10`, `MEDIUM −4`, `LOW −1`, `INFO 0` (floored at 0). A pillar whose checks all passed — or were all skipped — scores 100. `scan_all_pillars.overall_health_score` is the mean of the six pillar scores.
+Each pillar starts at 100 and subtracts a penalty per finding, by severity: `CRITICAL -20`, `HIGH -10`, `MEDIUM -4`, `LOW -1`, `INFO 0` (floored at 0). A pillar whose checks all passed - or were all skipped - scores 100. `scan_all_pillars.overall_health_score` is the mean of the six pillar scores.
 
 ---
 
 ## Design principles
 
 - **Generate-never-mutate.** Every AWS API call is `Describe`/`List`/`Get` only. The server can never create, modify, or delete a resource. The minimal IAM policy in [`iam-policy-readonly.json`](iam-policy-readonly.json) grants nothing but read actions.
-- **Per-check failure isolation.** Each check runs independently in a thread pool. A missing IAM permission, an unauthorized region, or a transient API error on one check is caught (`NoCredentialsError`, `ClientError`, `BotoCoreError`, or any unexpected exception) and reported in a `checks_skipped` list — it never aborts the rest of the scan.
+- **Per-check failure isolation.** Each check runs independently in a thread pool. A missing IAM permission, an unauthorized region, or a transient API error on one check is caught (`NoCredentialsError`, `ClientError`, `BotoCoreError`, or any unexpected exception) and reported in a `checks_skipped` list - it never aborts the rest of the scan.
 - **Real best-practice IDs.** `check_id` values are taken from the published AWS Well-Architected pillar documentation, not invented.
-- **Global vs. regional checks.** Checks against global services (IAM root settings, the S3 bucket namespace, account-level Block Public Access, AWS Budgets) are marked `global_check`. They evaluate account-wide state that does not vary by region and are designed to run exactly once — so a future multi-region loop never fans them out per region.
+- **Global vs. regional checks.** Checks against global services (IAM root settings, the S3 bucket namespace, account-level Block Public Access, AWS Budgets) are marked `global_check`. They evaluate account-wide state that does not vary by region and are designed to run exactly once - so a future multi-region loop never fans them out per region.
 
 ---
 
@@ -154,7 +154,7 @@ mcp = MCPServer("aws-wa-mcp-server", version="0.1.0")
 <details>
 <summary><strong>Migrating from <code>mcp</code> 1.x</strong></summary>
 
-On the 1.x SDK this class was `FastMCP` in `mcp.server.fastmcp`. The `add_tool` / `tool` / `run` APIs are signature-compatible, so the only change to run on 1.x is the import and the constructor call in [`aws_wa_mcp/server.py`](aws_wa_mcp/server.py) — the tool functions themselves are unchanged. This project is developed and verified against `mcp` 2.0.0; the `pyproject.toml` pin is `mcp>=2.0`.
+On the 1.x SDK this class was `FastMCP` in `mcp.server.fastmcp`. The `add_tool` / `tool` / `run` APIs are signature-compatible, so the only change to run on 1.x is the import and the constructor call in [`aws_wa_mcp/server.py`](aws_wa_mcp/server.py) - the tool functions themselves are unchanged. This project is developed and verified against `mcp` 2.0.0; the `pyproject.toml` pin is `mcp>=2.0`.
 
 </details>
 
@@ -166,7 +166,7 @@ Transport is **stdio** (for local use with Claude Desktop / Claude Code). There 
 
 ### AWS credentials
 
-Credentials are resolved the usual way by boto3 — any of these work:
+Credentials are resolved the usual way by boto3 - any of these work:
 
 - `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`)
 - a named profile via `AWS_PROFILE` or the tool's `profile` argument
@@ -305,7 +305,7 @@ Once it's wired up, just talk to your assistant in plain language:
 "Scan my AWS account against the Well-Architected security pillar"
 "Check my account for reliability risks like single-AZ RDS and load balancers"
 "Where am I wasting money? Run the cost optimization scan"
-"Audit performance efficiency — flag gp2 volumes and previous-gen instances"
+"Audit performance efficiency - flag gp2 volumes and previous-gen instances"
 "Run the operational excellence checks in eu-west-2"
 "Scan sustainability using the 'audit' profile"
 "Run all six Well-Architected pillars and give me the overall health score"
