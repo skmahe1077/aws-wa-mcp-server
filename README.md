@@ -9,12 +9,12 @@ Scan an AWS account against all six pillars of the [AWS Well-Architected Framewo
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![MCP Compatible](https://img.shields.io/badge/MCP-compatible-brightgreen.svg)](https://modelcontextprotocol.io)
-[![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen.svg)](#development)
+[![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen.svg)](#contributing)
 [![Read-only](https://img.shields.io/badge/AWS-read--only-blueviolet.svg)](#design-principles)
 
 <br/>
 
-[Features](#features) | [Installation](#installation) | [Configuration](#configuration) | [Usage](#usage) | [Development](#development)
+[Features](#features) | [Installation](#installation) | [Configuration](#configuration) | [Usage](#usage) | [Contributing](#contributing)
 
 </div>
 
@@ -415,7 +415,11 @@ The assistant runs the scan and returns findings mapped to real best-practice ID
 
 ---
 
-## Development
+## Contributing
+
+Contributions are welcome, whether it's a new check, a bug fix, or docs.
+
+**Get set up:**
 
 ```bash
 git clone https://github.com/skmahe1077/aws-wa-mcp-server.git
@@ -423,14 +427,19 @@ cd aws-wa-mcp-server
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[test]"
-
-# Run the tests
 pytest -q
 ```
 
-The suite uses [`moto`](https://github.com/getmoto/moto) to mock boto3, so all **37 tests** run in CI with no live AWS calls or credentials. Coverage includes the harness's failure-isolation and scoring logic (with `unittest.mock`-style fake checks), each pillar's checks provisioned against mocked AWS backends, and the compliance mapping + audit envelope.
+The suite uses [`moto`](https://github.com/getmoto/moto) to mock boto3, so all **37 tests** run with no live AWS calls or credentials.
 
-Each pillar lives in its own module under `aws_wa_mcp/pillars/` and exposes a `CHECKS` list; `aws_wa_mcp/server.py` registers one `scan_<pillar>` tool per module plus `scan_all_pillars`, so adding a check is a change to a single pillar module.
+**Adding a check:** each pillar lives in its own module under `aws_wa_mcp/pillars/` and exposes a `CHECKS` list; `aws_wa_mcp/server.py` registers one `scan_<pillar>` tool per module plus `scan_all_pillars`. To add a check, write a read-only (`Describe`/`List`/`Get`) function in the relevant pillar module, decorate it with `@check(...)`, add it to that module's `CHECKS`, and map its ID in `CONTROL_MAP` for CIS/NIST lineage.
+
+**Before opening a PR:**
+
+1. Branch off `main` and keep the change focused.
+2. Add or update tests; `pytest -q` must pass.
+3. Keep every check strictly read-only, no mutating AWS calls.
+4. Open a pull request describing the change.
 
 ---
 
