@@ -86,7 +86,14 @@ WA_DOCS_BASE = "https://docs.aws.amazon.com/wellarchitected/latest"
 
 @dataclass
 class Finding:
-    """A single detected Well-Architected best-practice violation."""
+    """A single detected Well-Architected best-practice violation.
+
+    ``cis_control`` and ``nist_csf`` are compliance-framework cross-references
+    (CIS AWS Foundations Benchmark control, NIST CSF category) populated
+    centrally from :data:`CONTROL_MAP` when the finding passes through
+    :func:`run_checks`. They stay empty for check IDs with no published
+    mapping, so a finding always carries its own audit-grade control lineage.
+    """
 
     pillar: str
     check_id: str
@@ -97,6 +104,8 @@ class Finding:
     detail: str
     recommendation: str
     wa_reference: str
+    cis_control: str = ""
+    nist_csf: str = ""
 
     def to_dict(self) -> dict:
         d = self.__dict__.copy()
@@ -154,6 +163,78 @@ class PillarScanResult:
             "findings": [f.to_dict() for f in self.findings],
             "checks_skipped": [c.to_dict() for c in self.checks_skipped],
         }
+
+
+# ---------------------------------------------------------------------------
+# Compliance framework mapping
+# ---------------------------------------------------------------------------
+
+# Cross-reference each Well-Architected best-practice ID to a recognised
+# compliance control, so findings carry audit-grade lineage beyond the WA
+# framework itself:
+#   * cis  - CIS AWS Foundations Benchmark control (empty when no direct
+#            benchmark control exists for the check).
+#   * nist - NIST Cybersecurity Framework (CSF) subcategory.
+# These are indicative mappings for continuous control monitoring; they are
+# conservative and only claim a CIS number where a genuine control exists.
+CONTROL_MAP = {
+    # Security
+    "SEC02-BP01": ("CIS 1.5", "PR.AC-1"),    # root user MFA
+    "SEC02-BP02": ("CIS 1.4", "PR.AC-1"),    # no root access keys
+    "SEC03-BP07": ("CIS 2.1.4", "PR.DS-5"),  # S3 Block Public Access
+    "SEC04-BP01": ("", "DE.CM-1"),           # GuardDuty threat detection
+    "SEC05-BP02": ("CIS 5.2", "PR.AC-5"),    # SG open to 0.0.0.0/0
+    # Reliability
+    "REL09-BP01": ("", "PR.IP-4"),           # backups
+    "REL10-BP01": ("", "PR.PT-5"),           # multi-AZ resilience
+    # Cost Optimization
+    "COST02-BP05": ("", "ID.BE-3"),          # budgets
+    "COST04-BP03": ("", "ID.AM-1"),          # decommission unused resources
+    "COST06-BP02": ("", "ID.AM-1"),          # right-size instance types
+    # Performance Efficiency
+    "PERF02-BP01": ("", "ID.AM-1"),          # current-gen compute
+    "PERF02-BP03": ("", "DE.CM-1"),          # detailed monitoring
+    "PERF03-BP02": ("", "ID.AM-1"),          # current-gen storage
+    # Operational Excellence
+    "OPS04-BP02": ("CIS 3.1", "DE.CM-1"),    # multi-region CloudTrail
+    "OPS05-BP03": ("CIS 3.5", "DE.CM-1"),    # AWS Config recorder
+    "OPS08-BP02": ("", "PR.PT-1"),           # log retention
+    "OPS08-BP04": ("CIS 4.1", "DE.CM-1"),    # CloudWatch alarms
+    # Sustainability
+    "SUS02-BP01": ("", "ID.AM-1"),
+    "SUS04-BP03": ("", "ID.AM-1"),
+    "SUS05-BP01": ("", "ID.AM-1"),
+    "SUS05-BP02": ("", "ID.AM-1"),
+}
+
+
+def standard_refs(check_id: str) -> tuple:
+    """Return ``(cis_control, nist_csf)`` for a WA check ID, or ``("", "")``."""
+    return CONTROL_MAP.get(check_id, ("", ""))
+
+
+def compliance_summary(findings: List["Finding"], controls_evaluated: int) -> dict:
+    """Roll findings up into a control-monitoring summary.
+
+    A check that produced no findings is treated as a passed control; a check
+    with one or more findings is a failed control. Also lists the distinct CIS
+    and NIST references flagged, so the result maps onto recognised frameworks.
+    """
+    controls_failed = {f.check_id for f in findings}
+    # Derive framework refs from the check ID directly so the summary is
+    # correct whether or not the findings were enriched via run_checks.
+    refs = [standard_refs(cid) for cid in controls_failed]
+    cis_flagged = sorted({cis for cis, _ in refs if cis})
+    nist_flagged = sorted({nist for _, nist in refs if nist})
+    return {
+        "controls_evaluated": controls_evaluated,
+        "controls_failed": len(controls_failed),
+        "controls_passed": max(0, controls_evaluated - len(controls_failed)),
+        "frameworks": {
+            "cis_aws_foundations": {"controls_flagged": cis_flagged},
+            "nist_csf": {"categories_flagged": nist_flagged},
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -322,6 +403,12 @@ def run_checks(
                     )
                 )
             else:
+                for finding in findings or []:
+                    # Attach compliance lineage centrally so every check
+                    # inherits its CIS/NIST references without repeating them.
+                    finding.cis_control, finding.nist_csf = standard_refs(
+                        finding.check_id
+                    )
                 result.findings.extend(findings or [])
 
     result.findings.sort(key=lambda f: f.severity.rank, reverse=True)

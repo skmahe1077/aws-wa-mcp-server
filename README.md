@@ -4,12 +4,12 @@
 
 **Live, read-only Well-Architected reviews of your AWS account, straight from your assistant.**
 
-Scan an AWS account against all six pillars of the [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/) - Cost Optimization, Reliability, Performance Efficiency, Operational Excellence, Security, and Sustainability - and get back concrete findings mapped to real best-practice IDs, each with a severity, the offending resource, and a remediation recommendation.
+Scan an AWS account against all six pillars of the [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/) (Cost Optimization, Reliability, Performance Efficiency, Operational Excellence, Security, and Sustainability) and get back concrete findings mapped to real best-practice IDs, each with a severity, the offending resource, and a remediation recommendation.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![MCP Compatible](https://img.shields.io/badge/MCP-compatible-brightgreen.svg)](https://modelcontextprotocol.io)
-[![Tests](https://img.shields.io/badge/tests-29%20passed-brightgreen.svg)](#development)
+[![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen.svg)](#development)
 [![Read-only](https://img.shields.io/badge/AWS-read--only-blueviolet.svg)](#design-principles)
 
 <br/>
@@ -22,12 +22,12 @@ Scan an AWS account against all six pillars of the [AWS Well-Architected Framewo
 
 ## Features
 
-The server exposes **7 scanning tools** - one per Well-Architected pillar, plus an account-wide `scan_all_pillars` - all reachable through a single MCP interface. Point your assistant at the pillar you care about and ask.
+The server exposes **7 scanning tools** (one per Well-Architected pillar, plus an account-wide `scan_all_pillars`), all reachable through a single MCP interface. Point your assistant at the pillar you care about and ask.
 
 Every tool accepts optional `region` and `profile` arguments and returns findings sorted by severity, a 0-100 pillar `health_score`, and a `checks_skipped` list for any check blocked by missing permissions or an API error.
 
 <details>
-<summary><strong>Security</strong> - <code>scan_security</code></summary>
+<summary><strong>Security</strong>: <code>scan_security</code></summary>
 
 | Check | Best-practice ID |
 |---|---|
@@ -40,7 +40,7 @@ Every tool accepts optional `region` and `profile` arguments and returns finding
 </details>
 
 <details>
-<summary><strong>Reliability</strong> - <code>scan_reliability</code></summary>
+<summary><strong>Reliability</strong>: <code>scan_reliability</code></summary>
 
 | Check | Best-practice ID |
 |---|---|
@@ -53,7 +53,7 @@ Every tool accepts optional `region` and `profile` arguments and returns finding
 </details>
 
 <details>
-<summary><strong>Cost Optimization</strong> - <code>scan_cost_optimization</code></summary>
+<summary><strong>Cost Optimization</strong>: <code>scan_cost_optimization</code></summary>
 
 | Check | Best-practice ID |
 |---|---|
@@ -65,7 +65,7 @@ Every tool accepts optional `region` and `profile` arguments and returns finding
 </details>
 
 <details>
-<summary><strong>Performance Efficiency</strong> - <code>scan_performance_efficiency</code></summary>
+<summary><strong>Performance Efficiency</strong>: <code>scan_performance_efficiency</code></summary>
 
 | Check | Best-practice ID |
 |---|---|
@@ -77,7 +77,7 @@ Every tool accepts optional `region` and `profile` arguments and returns finding
 </details>
 
 <details>
-<summary><strong>Operational Excellence</strong> - <code>scan_operational_excellence</code></summary>
+<summary><strong>Operational Excellence</strong>: <code>scan_operational_excellence</code></summary>
 
 | Check | Best-practice ID |
 |---|---|
@@ -89,7 +89,7 @@ Every tool accepts optional `region` and `profile` arguments and returns finding
 </details>
 
 <details>
-<summary><strong>Sustainability</strong> - <code>scan_sustainability</code></summary>
+<summary><strong>Sustainability</strong>: <code>scan_sustainability</code></summary>
 
 | Check | Best-practice ID |
 |---|---|
@@ -101,7 +101,7 @@ Every tool accepts optional `region` and `profile` arguments and returns finding
 </details>
 
 <details>
-<summary><strong>All pillars</strong> - <code>scan_all_pillars</code></summary>
+<summary><strong>All pillars</strong>: <code>scan_all_pillars</code></summary>
 
 Runs every check above and returns an **overall weighted health score** (the mean of the six severity-weighted pillar scores), per-pillar `health_score` values, full per-pillar results, aggregate totals, and the top findings account-wide.
 
@@ -109,16 +109,51 @@ Runs every check above and returns an **overall weighted health score** (the mea
 
 ### Health score
 
-Each pillar starts at 100 and subtracts a penalty per finding, by severity: `CRITICAL -20`, `HIGH -10`, `MEDIUM -4`, `LOW -1`, `INFO 0` (floored at 0). A pillar whose checks all passed - or were all skipped - scores 100. `scan_all_pillars.overall_health_score` is the mean of the six pillar scores.
+Each pillar starts at 100 and subtracts a penalty per finding, by severity: `CRITICAL -20`, `HIGH -10`, `MEDIUM -4`, `LOW -1`, `INFO 0` (floored at 0). A pillar whose checks all passed (or were all skipped) scores 100. `scan_all_pillars.overall_health_score` is the mean of the six pillar scores.
+
+### Compliance mapping & audit trail
+
+Every scan is built for continuous control monitoring, not just a one-off glance:
+
+- **Standards cross-reference.** Each finding is mapped to a recognised control (a **CIS AWS Foundations Benchmark** ID and a **NIST CSF** category) alongside its Well-Architected ID, so results are meaningful to auditors and GRC tooling. Findings gain `cis_control` and `nist_csf` fields; check IDs with no published benchmark control leave them empty rather than inventing one.
+- **Compliance summary.** Each response includes a `compliance` block: controls evaluated, passed, and failed, plus the distinct CIS controls and NIST categories flagged.
+- **Attestation envelope.** Each response includes an `audit` block giving the scan a defensible record.
+
+```jsonc
+{
+  "audit": {
+    "scan_id": "fd5fa855-5b66-4431-bbf6-94096dd00225",
+    "generated_at": "2026-08-17T21:31:15Z",     // UTC
+    "tool_version": "0.1.0",
+    "region": "eu-west-1",
+    "read_only": true,
+    "account_id": "0384XXXXXXXX",
+    "scanned_by": "arn:aws:iam::0384XXXXXXXX:user/scanner"
+  },
+  "compliance": {
+    "controls_evaluated": 26,
+    "controls_failed": 8,
+    "controls_passed": 18,
+    "frameworks": {
+      "cis_aws_foundations": { "controls_flagged": ["CIS 2.1.4", "CIS 3.1", "CIS 5.2"] },
+      "nist_csf": { "categories_flagged": ["DE.CM-1", "PR.AC-5", "PR.DS-5"] }
+    }
+  }
+  // ... findings, pillar scores, etc.
+}
+```
+
+> The account ID and caller ARN come from a read-only `sts:GetCallerIdentity` call. If it is denied, those fields degrade to `null` rather than failing the scan. The mappings are indicative cross-references for control monitoring; see [Limitations](#limitations) on what still separates this from a formal audit.
 
 ---
 
 ## Design principles
 
 - **Generate-never-mutate.** Every AWS API call is `Describe`/`List`/`Get` only. The server can never create, modify, or delete a resource. The minimal IAM policy in [`iam-policy-readonly.json`](iam-policy-readonly.json) grants nothing but read actions.
-- **Per-check failure isolation.** Each check runs independently in a thread pool. A missing IAM permission, an unauthorized region, or a transient API error on one check is caught (`NoCredentialsError`, `ClientError`, `BotoCoreError`, or any unexpected exception) and reported in a `checks_skipped` list - it never aborts the rest of the scan.
+- **Per-check failure isolation.** Each check runs independently in a thread pool. A missing IAM permission, an unauthorized region, or a transient API error on one check is caught (`NoCredentialsError`, `ClientError`, `BotoCoreError`, or any unexpected exception) and reported in a `checks_skipped` list; it never aborts the rest of the scan.
 - **Real best-practice IDs.** `check_id` values are taken from the published AWS Well-Architected pillar documentation, not invented.
-- **Global vs. regional checks.** Checks against global services (IAM root settings, the S3 bucket namespace, account-level Block Public Access, AWS Budgets) are marked `global_check`. They evaluate account-wide state that does not vary by region and are designed to run exactly once - so a future multi-region loop never fans them out per region.
+- **Evidence-backed control monitoring.** Every finding carries its compliance lineage (CIS AWS Foundations control, NIST CSF category), and every scan returns an attestation envelope (a unique `scan_id`, a UTC timestamp, the tool version, and the account ID + caller ARN it ran against), so results are defensible, not just informative. See [Compliance mapping & audit trail](#compliance-mapping--audit-trail).
+- **Global vs. regional checks.** Checks against global services (IAM root settings, the S3 bucket namespace, account-level Block Public Access, AWS Budgets) are marked `global_check`. They evaluate account-wide state that does not vary by region and are designed to run exactly once, so a future multi-region loop never fans them out per region.
 
 ---
 
@@ -158,9 +193,9 @@ This installs the console script `aws-wa-mcp-server` (equivalent to `python -m a
 
 ## Configuration
 
-Set up AWS access **before** wiring the server into an MCP client - the client only launches the server; it does not create credentials. Do these three steps first, then move on to [Usage](#usage).
+Set up AWS access **before** wiring the server into an MCP client: the client only launches the server; it does not create credentials. Do these three steps first, then move on to [Usage](#usage).
 
-### Step 1 - Configure AWS credentials
+### Step 1: Configure AWS credentials
 
 Create a named profile with the AWS CLI (recommended), so the server can assume it later:
 
@@ -180,9 +215,9 @@ Credentials are resolved the usual way by boto3, so any of these also work inste
 
 **Region resolution order:** the tool's `region` argument → the session/profile default → `AWS_REGION` → `AWS_DEFAULT_REGION` → `us-east-1`.
 
-### Step 2 - Attach the read-only IAM policy
+### Step 2: Attach the read-only IAM policy
 
-Grant the principal exactly the read actions the checks need - nothing else. Attach [`iam-policy-readonly.json`](iam-policy-readonly.json):
+Grant the principal exactly the read actions the checks need, nothing else. Attach [`iam-policy-readonly.json`](iam-policy-readonly.json):
 
 ```bash
 aws iam put-user-policy \
@@ -230,7 +265,7 @@ The policy lists only these read actions:
 
 > The canonical policy in the repo enumerates each `ec2:Describe*` action individually. Use it verbatim for a least-privilege setup.
 
-### Step 3 - Verify access
+### Step 3: Verify access
 
 Confirm the profile resolves before pointing an MCP client at it:
 
@@ -357,7 +392,7 @@ Once it's wired up, just talk to your assistant in plain language:
 "Scan my AWS account against the Well-Architected security pillar"
 "Check my account for reliability risks like single-AZ RDS and load balancers"
 "Where am I wasting money? Run the cost optimization scan"
-"Audit performance efficiency - flag gp2 volumes and previous-gen instances"
+"Audit performance efficiency: flag gp2 volumes and previous-gen instances"
 "Run the operational excellence checks in eu-west-2"
 "Scan sustainability using the 'audit' profile"
 "Run all six Well-Architected pillars and give me the overall health score"
@@ -375,7 +410,7 @@ The assistant runs the scan and returns findings mapped to real best-practice ID
   Capture your MCP client (Claude Desktop / Kiro / MCP Inspector) showing a scan
   result, save them as docs/screenshots/example-scan.png and example-scan-1.png,
   then commit the PNGs.
-  Sanitize first: mask account IDs, ARNs, and resource IDs - this repo is public.
+  Sanitize first: mask account IDs, ARNs, and resource IDs; this repo is public.
 -->
 
 ---
@@ -393,7 +428,7 @@ python -m pip install -e ".[test]"
 pytest -q
 ```
 
-The suite uses [`moto`](https://github.com/getmoto/moto) to mock boto3, so all **29 tests** run in CI with no live AWS calls or credentials. Coverage includes the harness's failure-isolation and scoring logic (with `unittest.mock`-style fake checks) plus each pillar's checks provisioned against mocked AWS backends.
+The suite uses [`moto`](https://github.com/getmoto/moto) to mock boto3, so all **37 tests** run in CI with no live AWS calls or credentials. Coverage includes the harness's failure-isolation and scoring logic (with `unittest.mock`-style fake checks), each pillar's checks provisioned against mocked AWS backends, and the compliance mapping + audit envelope.
 
 Each pillar lives in its own module under `aws_wa_mcp/pillars/` and exposes a `CHECKS` list; `aws_wa_mcp/server.py` registers one `scan_<pillar>` tool per module plus `scan_all_pillars`, so adding a check is a change to a single pillar module.
 
@@ -403,7 +438,7 @@ Each pillar lives in its own module under `aws_wa_mcp/pillars/` and exposes a `C
 
 - **stdio transport only.** No Lambda/API Gateway deployment.
 - **Single region per invocation** (plus global-service checks). Pass different `region` values to cover more regions; the harness is already structured to run global checks only once when looped across regions.
-- Findings are heuristics aligned to best practices, not a substitute for the full AWS Well-Architected Tool review or a formal audit.
+- Findings are heuristics aligned to best practices. The CIS/NIST mappings and audit envelope make results **evidence-backed and continuously monitorable**, but this is a first-line control-monitoring tool; it complements and feeds the full AWS Well-Architected Tool review and a formal audit rather than replacing the human judgement, accountability, and sign-off those involve.
 
 ---
 
