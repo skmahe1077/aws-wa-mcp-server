@@ -143,7 +143,7 @@ Every scan is built for continuous control monitoring, not just a one-off glance
 }
 ```
 
-> The account ID and caller ARN come from a read-only `sts:GetCallerIdentity` call. If it is denied, those fields degrade to `null` rather than failing the scan. The mappings are indicative cross-references for control monitoring; see [Limitations](#limitations) on what still separates this from a formal audit.
+> The account ID and caller ARN come from a read-only `sts:GetCallerIdentity` call. If it is denied, those fields degrade to `null` rather than failing the scan. The mappings are indicative cross-references for control monitoring; see [Notes & scope](#notes--scope) on what still separates this from a formal audit.
 
 ---
 
@@ -434,11 +434,10 @@ Each pillar lives in its own module under `aws_wa_mcp/pillars/` and exposes a `C
 
 ---
 
-## Limitations
+## Notes & scope
 
-- **stdio transport only.** No Lambda/API Gateway deployment.
-- **Single region per invocation** (plus global-service checks). Pass different `region` values to cover more regions; the harness is already structured to run global checks only once when looped across regions.
-- Findings are heuristics aligned to best practices. The CIS/NIST mappings and audit envelope make results **evidence-backed and continuously monitorable**, but this is a first-line control-monitoring tool; it complements and feeds the full AWS Well-Architected Tool review and a formal audit rather than replacing the human judgement, accountability, and sign-off those involve.
+- **Scope:** one region per invocation, plus account-wide global checks. Pass different `region` values to cover more; the harness runs global checks only once when looped across regions.
+- **Positioning:** a first-line, evidence-backed control-monitoring tool that complements and feeds a formal Well-Architected review, not a replacement for one.
 
 ---
 
