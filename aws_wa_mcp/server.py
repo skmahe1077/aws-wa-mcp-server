@@ -15,6 +15,8 @@ AWS resources.
 from __future__ import annotations
 
 import os
+import uuid
+from datetime import datetime, timezone
 from statistics import mean
 from typing import Optional
 
@@ -23,7 +25,7 @@ from mcp.server.mcpserver import MCPServer
 
 from . import __version__
 from .pillars import PILLARS
-from .pillars.common import Finding, run_checks
+from .pillars.common import Finding, compliance_summary, run_checks
 
 mcp = MCPServer("aws-wa-mcp-server", version=__version__)
 
@@ -51,10 +53,45 @@ def _build_session(region: Optional[str], profile: Optional[str]):
     return session, resolved_region
 
 
+def _caller_identity(session) -> dict:
+    """Return the scanned account ID and caller ARN, for the audit trail.
+
+    Read-only (``sts:GetCallerIdentity``). Degrades to ``None`` values rather
+    than failing the scan if the call is denied or credentials are absent.
+    """
+    try:
+        ident = session.client("sts").get_caller_identity()
+        return {"account_id": ident.get("Account"), "scanned_by": ident.get("Arn")}
+    except Exception:  # noqa: BLE001 - identity is best-effort metadata
+        return {"account_id": None, "scanned_by": None}
+
+
+def _audit_meta(session, region: str) -> dict:
+    """Build the attestation envelope for a scan.
+
+    Gives each scan a defensible record: a unique ID, a UTC timestamp, the
+    tool version, the region, and who/what account it ran against.
+    """
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    meta = {
+        "scan_id": str(uuid.uuid4()),
+        "generated_at": now.replace("+00:00", "Z"),
+        "tool_version": __version__,
+        "region": region,
+        "read_only": True,
+    }
+    meta.update(_caller_identity(session))
+    return meta
+
+
 def _scan_one(module, region: Optional[str], profile: Optional[str]) -> dict:
     session, resolved_region = _build_session(region, profile)
     result = run_checks(module.CHECKS, session, resolved_region, module.PILLAR)
-    return result.to_dict()
+    return {
+        "audit": _audit_meta(session, resolved_region),
+        "compliance": compliance_summary(result.findings, result.checks_run),
+        **result.to_dict(),
+    }
 
 
 def _make_pillar_tool(suffix: str, module):
@@ -108,6 +145,7 @@ def scan_all_pillars(
     pillar_scores: dict = {}
     all_findings: list[Finding] = []
     total_skipped = 0
+    total_checks_run = 0
     severity_totals: dict = {}
 
     for module in PILLARS.values():
@@ -116,6 +154,7 @@ def scan_all_pillars(
         pillar_scores[module.PILLAR] = result.health_score
         all_findings.extend(result.findings)
         total_skipped += len(result.checks_skipped)
+        total_checks_run += result.checks_run
         for sev, n in result.severity_counts().items():
             severity_totals[sev] = severity_totals.get(sev, 0) + n
 
@@ -125,9 +164,11 @@ def scan_all_pillars(
     top = [f.to_dict() for f in all_findings[:_TOP_FINDINGS]]
 
     return {
+        "audit": _audit_meta(session, resolved_region),
         "region": resolved_region,
         "overall_health_score": overall,
         "pillar_scores": pillar_scores,
+        "compliance": compliance_summary(all_findings, total_checks_run),
         "totals": {
             "findings": len(all_findings),
             "checks_skipped": total_skipped,

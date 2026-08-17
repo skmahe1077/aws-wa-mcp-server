@@ -9,7 +9,7 @@ Scan an AWS account against all six pillars of the [AWS Well-Architected Framewo
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![MCP Compatible](https://img.shields.io/badge/MCP-compatible-brightgreen.svg)](https://modelcontextprotocol.io)
-[![Tests](https://img.shields.io/badge/tests-29%20passed-brightgreen.svg)](#development)
+[![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen.svg)](#development)
 [![Read-only](https://img.shields.io/badge/AWS-read--only-blueviolet.svg)](#design-principles)
 
 <br/>
@@ -111,6 +111,40 @@ Runs every check above and returns an **overall weighted health score** (the mea
 
 Each pillar starts at 100 and subtracts a penalty per finding, by severity: `CRITICAL -20`, `HIGH -10`, `MEDIUM -4`, `LOW -1`, `INFO 0` (floored at 0). A pillar whose checks all passed - or were all skipped - scores 100. `scan_all_pillars.overall_health_score` is the mean of the six pillar scores.
 
+### Compliance mapping & audit trail
+
+Every scan is built for continuous control monitoring, not just a one-off glance:
+
+- **Standards cross-reference.** Each finding is mapped to a recognised control - a **CIS AWS Foundations Benchmark** ID and a **NIST CSF** category - alongside its Well-Architected ID, so results are meaningful to auditors and GRC tooling. Findings gain `cis_control` and `nist_csf` fields; check IDs with no published benchmark control leave them empty rather than inventing one.
+- **Compliance summary.** Each response includes a `compliance` block: controls evaluated, passed, and failed, plus the distinct CIS controls and NIST categories flagged.
+- **Attestation envelope.** Each response includes an `audit` block giving the scan a defensible record.
+
+```jsonc
+{
+  "audit": {
+    "scan_id": "fd5fa855-5b66-4431-bbf6-94096dd00225",
+    "generated_at": "2026-08-17T21:31:15Z",     // UTC
+    "tool_version": "0.1.0",
+    "region": "eu-west-1",
+    "read_only": true,
+    "account_id": "0384XXXXXXXX",
+    "scanned_by": "arn:aws:iam::0384XXXXXXXX:user/scanner"
+  },
+  "compliance": {
+    "controls_evaluated": 26,
+    "controls_failed": 8,
+    "controls_passed": 18,
+    "frameworks": {
+      "cis_aws_foundations": { "controls_flagged": ["CIS 2.1.4", "CIS 3.1", "CIS 5.2"] },
+      "nist_csf": { "categories_flagged": ["DE.CM-1", "PR.AC-5", "PR.DS-5"] }
+    }
+  }
+  // ... findings, pillar scores, etc.
+}
+```
+
+> The account ID and caller ARN come from a read-only `sts:GetCallerIdentity` call. If it is denied, those fields degrade to `null` rather than failing the scan. The mappings are indicative cross-references for control monitoring - see [Limitations](#limitations) on what still separates this from a formal audit.
+
 ---
 
 ## Design principles
@@ -118,6 +152,7 @@ Each pillar starts at 100 and subtracts a penalty per finding, by severity: `CRI
 - **Generate-never-mutate.** Every AWS API call is `Describe`/`List`/`Get` only. The server can never create, modify, or delete a resource. The minimal IAM policy in [`iam-policy-readonly.json`](iam-policy-readonly.json) grants nothing but read actions.
 - **Per-check failure isolation.** Each check runs independently in a thread pool. A missing IAM permission, an unauthorized region, or a transient API error on one check is caught (`NoCredentialsError`, `ClientError`, `BotoCoreError`, or any unexpected exception) and reported in a `checks_skipped` list - it never aborts the rest of the scan.
 - **Real best-practice IDs.** `check_id` values are taken from the published AWS Well-Architected pillar documentation, not invented.
+- **Evidence-backed control monitoring.** Every finding carries its compliance lineage (CIS AWS Foundations control, NIST CSF category), and every scan returns an attestation envelope - a unique `scan_id`, a UTC timestamp, the tool version, and the account ID + caller ARN it ran against - so results are defensible, not just informative. See [Compliance mapping & audit trail](#compliance-mapping--audit-trail).
 - **Global vs. regional checks.** Checks against global services (IAM root settings, the S3 bucket namespace, account-level Block Public Access, AWS Budgets) are marked `global_check`. They evaluate account-wide state that does not vary by region and are designed to run exactly once - so a future multi-region loop never fans them out per region.
 
 ---
@@ -393,7 +428,7 @@ python -m pip install -e ".[test]"
 pytest -q
 ```
 
-The suite uses [`moto`](https://github.com/getmoto/moto) to mock boto3, so all **29 tests** run in CI with no live AWS calls or credentials. Coverage includes the harness's failure-isolation and scoring logic (with `unittest.mock`-style fake checks) plus each pillar's checks provisioned against mocked AWS backends.
+The suite uses [`moto`](https://github.com/getmoto/moto) to mock boto3, so all **37 tests** run in CI with no live AWS calls or credentials. Coverage includes the harness's failure-isolation and scoring logic (with `unittest.mock`-style fake checks), each pillar's checks provisioned against mocked AWS backends, and the compliance mapping + audit envelope.
 
 Each pillar lives in its own module under `aws_wa_mcp/pillars/` and exposes a `CHECKS` list; `aws_wa_mcp/server.py` registers one `scan_<pillar>` tool per module plus `scan_all_pillars`, so adding a check is a change to a single pillar module.
 
@@ -403,7 +438,7 @@ Each pillar lives in its own module under `aws_wa_mcp/pillars/` and exposes a `C
 
 - **stdio transport only.** No Lambda/API Gateway deployment.
 - **Single region per invocation** (plus global-service checks). Pass different `region` values to cover more regions; the harness is already structured to run global checks only once when looped across regions.
-- Findings are heuristics aligned to best practices, not a substitute for the full AWS Well-Architected Tool review or a formal audit.
+- Findings are heuristics aligned to best practices. The CIS/NIST mappings and audit envelope make results **evidence-backed and continuously monitorable**, but this is a first-line control-monitoring tool - it complements and feeds the full AWS Well-Architected Tool review and a formal audit rather than replacing the human judgement, accountability, and sign-off those involve.
 
 ---
 
